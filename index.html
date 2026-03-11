@@ -315,11 +315,41 @@ var SIGN_SYM=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒',
 var P_SYM={Sun:'☉',Moon:'☽',Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄',Uranus:'⛢',Neptune:'♆',Pluto:'♇','North Node':'☊','True_Node':'☊'};
 var P_COL={Sun:'#f0c040',Moon:'#c8d0e8',Mercury:'#a0b8c0',Venus:'#e880a0',Mars:'#e05040',Jupiter:'#d4a040',Saturn:'#90a0b0',Uranus:'#60d0d0',Neptune:'#6080e0',Pluto:'#b060c0','North Node':'#a060c0','True_Node':'#a060c0'};
 
+var SIGNS_SHORT=['Ari','Tau','Gem','Can','Leo','Vir','Lib','Sco','Sag','Cap','Aqu','Pis'];
+
 function signIdx(sign){
+  if(!sign) return 0;
   var i=SIGNS_EN.indexOf(sign);
   if(i>=0) return i;
   i=SIGNS_RU.indexOf(sign);
-  return i>=0?i:0;
+  if(i>=0) return i;
+  i=SIGNS_SHORT.indexOf(sign);
+  if(i>=0) return i;
+  // partial match for abbreviations
+  for(var j=0;j<SIGNS_EN.length;j++){
+    if(SIGNS_EN[j].indexOf(sign)===0||sign.indexOf(SIGNS_EN[j])===0) return j;
+  }
+  return 0;
+}
+
+function parseHouse(h){
+  if(!h) return 1;
+  var n=parseInt(h);
+  if(!isNaN(n)&&n>0) return n;
+  var map={First:1,Second:2,Third:3,Fourth:4,Fifth:5,Sixth:6,
+           Seventh:7,Eighth:8,Ninth:9,Tenth:10,Eleventh:11,Twelfth:12};
+  var s=String(h).replace('_House','').replace('_house','');
+  return map[s]||1;
+}
+
+function parseHouse(h){
+  if(!h) return 1;
+  var n=parseInt(h);
+  if(!isNaN(n)&&n>0) return n;
+  var map={First:1,Second:2,Third:3,Fourth:4,Fifth:5,Sixth:6,
+           Seventh:7,Eighth:8,Ninth:9,Tenth:10,Eleventh:11,Twelfth:12};
+  var s=String(h).replace(/_[Hh]ouse/,'');
+  return map[s]||1;
 }
 
 function normalizeChart(data){
@@ -331,7 +361,7 @@ function normalizeChart(data){
     planets[nm]={
       lon:idx*30+deg,
       sign:{name:SIGNS_RU[idx],symbol:SIGN_SYM[idx],idx:idx,degree:deg},
-      house:parseInt(p.house)||1,
+      house:parseHouse(p.house),
       symbol:P_SYM[nm]||'?',
       color:P_COL[nm]||'#e8dfc8',
       retrograde:p.retrograde
