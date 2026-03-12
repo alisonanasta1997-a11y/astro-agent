@@ -130,12 +130,14 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
       <div><div class="flabel">Город рождения</div><input type="text" id="f-city" placeholder="Асино"></div>
       <div class="coord-box">
         <div style="font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">📍 Координаты и часовой пояс</div>
+        <button class="btn-gold" type="button" id="geo-btn" onclick="autoGeocode()" style="margin-bottom:10px;padding:9px;font-size:12px">🔍 Определить автоматически по городу</button>
+        <div id="geo-result" style="display:none;font-size:11px;color:var(--gold);margin-bottom:8px;padding:6px 10px;background:rgba(212,175,55,0.05);border-radius:7px;border:1px solid var(--goldF)"></div>
         <div class="frow">
           <div style="flex:1"><div class="flabel">Широта</div><input type="number" id="f-lat" step="0.0001" placeholder="57.0050"></div>
           <div style="flex:1"><div class="flabel">Долгота</div><input type="number" id="f-lon" step="0.0001" placeholder="86.1472"></div>
           <div style="width:90px"><div class="flabel">UTC±</div><input type="number" id="f-gmt" step="0.5" min="-12" max="14" placeholder="+7"></div>
         </div>
-        <div class="coord-hint">Координаты: <a href="https://www.latlong.net" target="_blank">latlong.net</a> или <a href="https://maps.google.com" target="_blank">Google Maps</a> (правый клик → «Что здесь?»)</div>
+        <div class="coord-hint">Или введите вручную: <a href="https://www.latlong.net" target="_blank">latlong.net</a></div>
       </div>
       <div id="form-err" class="err-msg"></div>
       <button class="btn-gold" id="calc-btn" onclick="buildChart()">✦ Рассчитать натальную карту</button>
@@ -274,6 +276,44 @@ var TZ_MAP = {
 };
 
 // ── Расчёт карты ───────────────────────────────────────────────
+function autoGeocode(){
+  var city = document.getElementById('f-city').value.trim();
+  var date = document.getElementById('f-date').value;
+  var time = document.getElementById('f-time').value;
+  var btn  = document.getElementById('geo-btn');
+  var res  = document.getElementById('geo-result');
+
+  if(!city){ 
+    res.style.display='block'; res.style.color='#e07050';
+    res.textContent='⚠️ Сначала введите город'; return; 
+  }
+
+  var year=2000,month=1,day=1,hour=12;
+  if(date){ var p=date.split('-').map(Number); year=p[0];month=p[1];day=p[2]; }
+  if(time){ var t=time.split(':').map(Number); hour=t[0]; }
+
+  btn.disabled=true; btn.textContent='⏳ Определяю...';
+  res.style.display='none';
+
+  fetch(BACKEND+'/geocode',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({city:city,year:year,month:month,day:day,hour:hour})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.error){ throw new Error(d.error); }
+    document.getElementById('f-lat').value = d.lat;
+    document.getElementById('f-lon').value = d.lng;
+    document.getElementById('f-gmt').value = d.gmt;
+    res.style.display='block'; res.style.color='var(--gold)';
+    res.textContent='✓ '+d.display_name.split(',').slice(0,3).join(',');
+  }).catch(function(e){
+    res.style.display='block'; res.style.color='#e07050';
+    res.textContent='❌ '+e.message;
+  }).finally(function(){
+    btn.disabled=false; btn.textContent='🔍 Определить автоматически по городу';
+  });
+}
+
 function buildChart(){
   var name = document.getElementById('f-name').value.trim();
   var date = document.getElementById('f-date').value;
