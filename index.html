@@ -85,13 +85,13 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
       <div class="logo-sub">Swiss Ephemeris · Система домов Кох</div>
     </div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-      <span id="pdf-count" style="font-size:11px;color:var(--goldD)"></span>
+      
       <span id="status-dot" style="display:none;width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite"></span>
     </div>
   </header>
 
   <!-- UPLOAD -->
-  <div class="stage" id="st-upload">
+  <div class="stage" id="st-upload" style="display:none">
     <div><div class="stage-title">База знаний</div>
     <div class="stage-sub">Загрузите PDF-файлы.<br>Можно несколько сразу.</div></div>
     <div class="drop-zone" id="drop-zone" onclick="document.getElementById('finput').click()">
@@ -129,7 +129,7 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
       </div>
       <div id="form-err" class="err-msg"></div>
       <button class="btn-gold" id="calc-btn" onclick="buildChart()">✦ Рассчитать натальную карту</button>
-      <button class="btn-ghost" onclick="goUpload()">← Назад</button>
+      
     </div>
   </div>
 
