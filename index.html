@@ -305,7 +305,7 @@ function autoGeocode(){
     document.getElementById('f-lon').value = d.lng;
     document.getElementById('f-gmt').value = d.gmt;
     res.style.display='block'; res.style.color='var(--gold)';
-    res.textContent='✓ '+d.display_name.split(',').slice(0,3).join(',');
+    var dn=Array.isArray(d.display_name)?d.display_name.join(', '):d.display_name.split(',').slice(0,3).join(',');res.textContent='✓ '+dn;
   }).catch(function(e){
     res.style.display='block'; res.style.color='#e07050';
     res.textContent='❌ '+e.message;
