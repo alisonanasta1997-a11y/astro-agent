@@ -867,9 +867,8 @@ function renderWheel(){
   var asc=chart.houses.ASC;
 
   function lon2a(lon){
-    // ASC → left side (180° in SVG = 9 o'clock position)
-    // zodiac goes counter-clockwise in astrology, so we negate
-    return (((asc - lon + 180) % 360) + 360) % 360;
+    // ASC → left side (270° in SVG coordinate system = 9 o'clock)
+    return (((asc - lon + 270) % 360) + 360) % 360;
   }
   function pt(a,r){
     var rad=(a-90)*D2R;
