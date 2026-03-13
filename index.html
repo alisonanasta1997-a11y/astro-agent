@@ -52,7 +52,9 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
 #loading-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
 .spinner{width:48px;height:48px;border:3px solid var(--goldF);border-top-color:var(--gold);border-radius:50%;animation:spin 1.2s linear infinite}
 #chat-layout{flex:1;display:flex;gap:16px;padding:16px 0;max-height:calc(100vh - 108px);overflow:hidden}
-#sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+#sidebar{width:360px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+#tab-planets,#tab-aspects{overflow-y:auto;max-height:calc(100vh - 180px)}
+#tab-wheel{display:flex;justify-content:center;align-items:center}
 #chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
 #messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:11px;padding-right:4px}
 .msg{display:flex;gap:8px;align-items:flex-start;animation:fadeUp .3s ease}
@@ -159,10 +161,10 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
         <button class="tab" onclick="setTab('planets')">Планеты</button>
         <button class="tab" onclick="setTab('aspects')">Аспекты</button>
       </div>
-      <div id="tab-wheel"><canvas id="wheel-canvas" width="210" height="210"></canvas></div>
+      <div id="tab-wheel"><div id="wheel-svg-wrap"></div></div>
       <div id="tab-planets" style="display:none"></div>
       <div id="tab-aspects" style="display:none"></div>
-      <button class="btn-ghost" style="margin-top:4px" onclick="goForm()">← Новый клиент</button>
+      <button class="btn-ghost" style="margin-top:4px" onclick="goForm()">← Новый расчёт</button>
       <button class="btn-ghost" style="margin-top:4px" onclick="toggleRaw()">🔍 Данные бэкенда</button>
       <div id="raw-box"></div>
     </div>
@@ -557,6 +559,434 @@ function setTab(name){
       .classList.toggle('active',t===name);
     document.getElementById('tab-'+t).style.display=t===name?'block':'none';
   });
+}
+
+function renderPlanetsList(){
+  var chart=S.chart;
+  var HOUSE_RU=['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  var html='<div style="padding:4px 2px">';
+  html+='<div style="font-size:9px;letter-spacing:.15em;color:rgba(212,175,55,.4);text-transform:uppercase;padding:0 4px 8px">Планеты и точки</div>';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html+='<thead><tr style="color:rgba(212,175,55,.35);font-size:9px;letter-spacing:.1em">';
+  html+='<th style="text-align:left;padding:3px 4px;font-weight:400">Планета</th>';
+  html+='<th style="text-align:center;padding:3px 2px">Знак</th>';
+  html+='<th style="text-align:center;padding:3px 2px">°</th>';
+  html+='<th style="text-align:center;padding:3px 2px">Дом</th>';
+  html+='<th style="text-align:center;padding:3px 2px">℞</th>';
+  html+='</tr></thead><tbody>';
+
+  var order=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','North Node'];
+  order.forEach(function(name){
+    var p=chart.planets[name];
+    if(!p) return;
+    var deg=Math.floor(p.sign.degree);
+    var min=Math.floor((p.sign.degree-deg)*60);
+    html+='<tr style="border-top:1px solid rgba(212,175,55,0.06)">';
+    html+='<td style="padding:5px 4px;color:'+p.color+'">'+p.symbol+' <span style="color:rgba(232,220,200,.75);font-family:\'EB Garamond\',serif">'+name+'</span></td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(232,220,200,.6)">'+p.sign.symbol+' '+p.sign.name+'</td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(212,175,55,.7);font-variant-numeric:tabular-nums">'+deg+'°'+String(min).padStart(2,'0')+"'</td>";
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(212,175,55,.5);font-family:\'Cinzel\',serif;font-size:10px">'+(HOUSE_RU[p.house]||p.house)+'</td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(220,100,80,.8);font-size:10px">'+(p.retrograde?'℞':'')+'</td>';
+    html+='</tr>';
+  });
+
+  // ASC & MC
+  var asc=chart.houses.ASC, mc=chart.houses.MC;
+  var ascSign=Math.floor(asc/30)%12, mcSign=Math.floor(mc/30)%12;
+  var SIGN_SYM2=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+  [[ascSign, asc%30, 'АСЦ','↑','#c8b880'],[mcSign,mc%30,'МС','⊕','#a0a0c0']].forEach(function(row){
+    var deg2=Math.floor(row[1]), min2=Math.floor((row[1]-deg2)*60);
+    html+='<tr style="border-top:1px solid rgba(212,175,55,0.06)">';
+    html+='<td style="padding:5px 4px;color:'+row[4]+'">'+row[3]+' <span style="color:rgba(232,220,200,.75);font-family:\'EB Garamond\',serif">'+row[2]+'</span></td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(232,220,200,.6)">'+SIGN_SYM2[row[0]]+' '+SIGNS_RU[row[0]]+'</td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(212,175,55,.7);font-variant-numeric:tabular-nums">'+deg2+'°'+String(min2).padStart(2,'0')+"'</td>";
+    html+='<td colspan="2"></td>';
+    html+='</tr>';
+  });
+
+  html+='</tbody></table></div>';
+  document.getElementById('tab-planets').innerHTML=html;
+}
+
+function renderAspectsList(){
+  var chart=S.chart;
+  var html='<div style="padding:4px 2px">';
+  html+='<div style="font-size:9px;letter-spacing:.15em;color:rgba(212,175,55,.4);text-transform:uppercase;padding:0 4px 8px">Аспекты</div>';
+
+  var groups={};
+  chart.aspects.forEach(function(a){
+    var gname=a.asp?a.asp.name:'Другой';
+    if(!groups[gname]) groups[gname]=[];
+    groups[gname].push(a);
+  });
+
+  var ORDER=['Соединение','Оппозиция','Трин','Квадратура','Секстиль'];
+  ORDER.forEach(function(gname){
+    var list=groups[gname];
+    if(!list||!list.length) return;
+    var asp=list[0].asp;
+    html+='<div style="margin-bottom:10px">';
+    html+='<div style="display:flex;align-items:center;gap:6px;padding:4px 4px 6px;border-bottom:1px solid rgba(212,175,55,0.1)">';
+    html+='<span style="font-size:14px;color:'+(asp?asp.color:'#888')+'">'+( asp?asp.symbol:'?')+'</span>';
+    html+='<span style="font-size:10px;color:'+(asp?asp.color:'#888')+';letter-spacing:.08em">'+gname+'</span>';
+    html+='<span style="font-size:9px;color:rgba(212,175,55,.25);margin-left:auto">'+list.length+' асп.</span>';
+    html+='</div>';
+    list.forEach(function(a){
+      var p1=chart.planets[a.p1], p2=chart.planets[a.p2];
+      if(!p1||!p2) return;
+      html+='<div style="display:flex;align-items:center;gap:4px;padding:4px 4px;border-bottom:1px solid rgba(212,175,55,0.04)">';
+      html+='<span style="color:'+p1.color+';font-size:12px">'+p1.symbol+'</span>';
+      html+='<span style="color:rgba(232,220,200,.55);font-size:10px;font-family:\'EB Garamond\',serif;flex:1">'+a.p1+'</span>';
+      html+='<span style="color:'+(asp?asp.color:'#888')+';font-size:11px;margin:0 2px">'+( asp?asp.symbol:'?')+'</span>';
+      html+='<span style="color:rgba(232,220,200,.55);font-size:10px;font-family:\'EB Garamond\',serif;flex:1;text-align:right">'+a.p2+'</span>';
+      html+='<span style="color:'+p2.color+';font-size:12px">'+p2.symbol+'</span>';
+      html+='<span style="color:rgba(212,175,55,.3);font-size:9px;margin-left:6px;font-variant-numeric:tabular-nums">'+a.orb.toFixed(1)+'°</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+
+  html+='</div>';
+  document.getElementById('tab-aspects').innerHTML=html;
+}
+
+function startChat(){
+  showStage('chat');
+  document.getElementById('status-dot').style.display='block';
+  renderWheel();
+  renderPlanetsList();
+  renderAspectsList();
+
+  var p=S.chart.planets;
+  var sun=p['Sun'],moon=p['Moon'];
+  S.msgs=[{role:'assistant',content:
+    'Здравствуйте, **'+S.person.name+'**! ✨\n\n'+
+    'Натальная карта рассчитана — система домов **Кох**.\n\n'+
+    '☉ Солнце: **'+sun.sign.symbol+' '+sun.sign.name+'**, '+sun.house+' дом\n'+
+    '☽ Луна: **'+moon.sign.symbol+' '+moon.sign.name+'**, '+moon.house+' дом\n'+
+    '↑ АСЦ: **'+SIGN_SYM[signIdx(S.chart.houses.ASC>=0?SIGNS_EN[Math.floor(S.chart.houses.ASC/30)%12]:0)]+' '+SIGNS_RU[Math.floor(S.chart.houses.ASC/30)%12]+'**\n\n'+
+    'Выберите тему консультации:'
+  }];
+  renderMsgs();
+  document.getElementById('topic-area').style.display='block';
+}
+
+function chooseTopic(topic){
+  document.getElementById('topic-area').style.display='none';
+  document.getElementById('input-area').style.display='block';
+  S.msgs.push({role:'user',content:'Хочу консультацию по теме: '+topic});
+  renderMsgs();
+  callClaude();
+}
+
+function sendMsg(){
+  var inp=document.getElementById('msg-input');
+  var text=inp.value.trim();
+  if(!text||S.loading) return;
+  inp.value=''; inp.style.height='auto';
+  S.msgs.push({role:'user',content:text});
+  renderMsgs();
+  callClaude();
+}
+
+function buildPrompt(){
+  if(!S.chart) return '';
+  var p=S.chart.planets;
+  var lines=Object.entries(p).map(function(e){
+    var n=e[0],pl=e[1];
+    return pl.symbol+' '+n+': '+pl.sign.name+' '+Math.floor(pl.sign.degree)+'° · '+pl.house+' дом'+(pl.retrograde?' ℞':'');
+  }).join('\n');
+  var kb=S.pdfs.map(function(f,i){return '=== '+f.name+' ===\n'+f.text;}).join('\n\n');
+  return 'Ты — профессиональный астролог-консультант. Работаешь строго на основе натальной карты клиента.\n\n'+
+    'КЛИЕНТ: '+S.person.name+', '+S.person.date+', '+S.person.time+', '+S.person.city+'\n\n'+
+    'ПЛАНЕТЫ (Koch):\n'+lines+'\n\n'+
+    'ПРАВИЛА:\n1. Опирайся КОНКРЕТНО на планеты, знаки и дома этой карты.\n'+
+    '2. Пиши тепло, профессионально, с практическими рекомендациями.\n3. Язык: русский.\n\n'+
+    'БАЗА ЗНАНИЙ:\n'+(kb||'(не загружена — используй классическую астрологию)');
+}
+
+function callClaude(){
+  S.loading=true;
+  document.getElementById('send-btn').disabled=true;
+  addTyping();
+  fetch(BACKEND+'/chat',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
+      system:buildPrompt(),
+      messages:S.msgs.map(function(m){return {role:m.role,content:m.content};})
+    })
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    removeTyping();
+    var text=d.content&&d.content[0]?d.content[0].text:'Ошибка ответа.';
+    S.msgs.push({role:'assistant',content:text});
+    renderMsgs();
+  }).catch(function(){
+    removeTyping();
+    S.msgs.push({role:'assistant',content:'Произошла ошибка. Попробуйте снова.'});
+    renderMsgs();
+  }).finally(function(){
+    S.loading=false;
+    document.getElementById('send-btn').disabled=false;
+  });
+}
+
+function renderMsgs(){
+  var el=document.getElementById('messages');
+  el.innerHTML=S.msgs.map(function(m){
+    return '<div class="msg" style="justify-content:'+(m.role==='user'?'flex-end':'flex-start')+'">'+
+      (m.role==='assistant'?'<div class="msg-av">✦</div>':'')+
+      '<div class="bubble '+m.role+'">'+fmt(m.content)+'</div></div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+function fmt(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
+function addTyping(){
+  document.getElementById('messages').insertAdjacentHTML('beforeend',
+    '<div class="msg" id="typing"><div class="msg-av">✦</div><div class="bubble ai"><div class="typing"><span></span><span></span><span></span></div></div></div>');
+  document.getElementById('messages').scrollTop=9999;
+}
+function removeTyping(){ var t=document.getElementById('typing'); if(t) t.remove(); }
+
+// ── Сайдбар ────────────────────────────────────────────────────
+function setTab(name){
+  ['wheel','planets','aspects'].forEach(function(t){
+    document.querySelector('.tab:nth-child('+(t==='wheel'?1:t==='planets'?2:3)+')')
+      .classList.toggle('active',t===name);
+    document.getElementById('tab-'+t).style.display=t===name?'block':'none';
+  });
+}
+
+function renderPlanetsList(){
+  var chart=S.chart;
+  var HOUSE_RU=['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  var html='<div style="padding:4px 2px">';
+  html+='<div style="font-size:9px;letter-spacing:.15em;color:rgba(212,175,55,.4);text-transform:uppercase;padding:0 4px 8px">Планеты и точки</div>';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html+='<thead><tr style="color:rgba(212,175,55,.35);font-size:9px;letter-spacing:.1em">';
+  html+='<th style="text-align:left;padding:3px 4px;font-weight:400">Планета</th>';
+  html+='<th style="text-align:center;padding:3px 2px">Знак</th>';
+  html+='<th style="text-align:center;padding:3px 2px">°</th>';
+  html+='<th style="text-align:center;padding:3px 2px">Дом</th>';
+  html+='<th style="text-align:center;padding:3px 2px">℞</th>';
+  html+='</tr></thead><tbody>';
+
+  var order=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','North Node'];
+  order.forEach(function(name){
+    var p=chart.planets[name];
+    if(!p) return;
+    var deg=Math.floor(p.sign.degree);
+    var min=Math.floor((p.sign.degree-deg)*60);
+    html+='<tr style="border-top:1px solid rgba(212,175,55,0.06)">';
+    html+='<td style="padding:5px 4px;color:'+p.color+'">'+p.symbol+' <span style="color:rgba(232,220,200,.75);font-family:\'EB Garamond\',serif">'+name+'</span></td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(232,220,200,.6)">'+p.sign.symbol+' '+p.sign.name+'</td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(212,175,55,.7);font-variant-numeric:tabular-nums">'+deg+'°'+String(min).padStart(2,'0')+"'</td>";
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(212,175,55,.5);font-family:\'Cinzel\',serif;font-size:10px">'+(HOUSE_RU[p.house]||p.house)+'</td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(220,100,80,.8);font-size:10px">'+(p.retrograde?'℞':'')+'</td>';
+    html+='</tr>';
+  });
+
+  // ASC & MC
+  var asc=chart.houses.ASC, mc=chart.houses.MC;
+  var ascSign=Math.floor(asc/30)%12, mcSign=Math.floor(mc/30)%12;
+  var SIGN_SYM2=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+  [[ascSign, asc%30, 'АСЦ','↑','#c8b880'],[mcSign,mc%30,'МС','⊕','#a0a0c0']].forEach(function(row){
+    var deg2=Math.floor(row[1]), min2=Math.floor((row[1]-deg2)*60);
+    html+='<tr style="border-top:1px solid rgba(212,175,55,0.06)">';
+    html+='<td style="padding:5px 4px;color:'+row[4]+'">'+row[3]+' <span style="color:rgba(232,220,200,.75);font-family:\'EB Garamond\',serif">'+row[2]+'</span></td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(232,220,200,.6)">'+SIGN_SYM2[row[0]]+' '+SIGNS_RU[row[0]]+'</td>';
+    html+='<td style="text-align:center;padding:5px 2px;color:rgba(212,175,55,.7);font-variant-numeric:tabular-nums">'+deg2+'°'+String(min2).padStart(2,'0')+"'</td>";
+    html+='<td colspan="2"></td>';
+    html+='</tr>';
+  });
+
+  html+='</tbody></table></div>';
+  document.getElementById('tab-planets').innerHTML=html;
+}
+
+function renderAspectsList(){
+  var el=document.getElementById('tab-aspects');
+  el.innerHTML=(S.chart.aspects||[]).slice(0,16).map(function(a){
+    var col=a.asp?a.asp.color:'#aaa';
+    var sym=a.asp?a.asp.symbol:'?';
+    var nm=a.asp?a.asp.name:'?';
+    var p1=S.chart.planets[a.p1],p2=S.chart.planets[a.p2];
+    return '<div class="a-row">'+
+      '<span style="color:'+col+'">'+sym+'</span>'+
+      '<span style="flex:1;color:#c8bfa8">'+(p1?p1.symbol:'?')+(p2?p2.symbol:'?')+'</span>'+
+      '<span style="color:'+col+';font-size:9px">'+nm.slice(0,3)+'</span>'+
+      '<span style="color:var(--goldD);font-size:9px;margin-left:4px">'+a.orb.toFixed(1)+'°</span></div>';
+  }).join('');
+}
+
+// ── Raw данные ─────────────────────────────────────────────────
+function toggleRaw(){
+  var el=document.getElementById('raw-box');
+  if(!S.rawData){ el.style.display='block'; el.textContent='Нет данных от бэкенда'; return; }
+  el.style.display=el.style.display==='none'?'block':'none';
+  el.textContent=S.rawData.planets.map(function(p){
+    return p.name+': '+p.sign+' ('+p.sign_ru+') '+Number(p.norm_degree).toFixed(2)+'° дом '+p.house+(p.retrograde?' ℞':'');
+  }).join('\n')+'\n\nASC: '+(S.rawData.ascendant.sign_ru||S.rawData.ascendant.sign)+' '+Number(S.rawData.ascendant.degree).toFixed(2)+'°'+
+  '\nMC: '+(S.rawData.midheaven.sign_ru||S.rawData.midheaven.sign)+' '+Number(S.rawData.midheaven.degree).toFixed(2)+'°';
+}
+
+// ── Колесо ─────────────────────────────────────────────────────
+function renderWheel(){
+  var chart=S.chart;
+  var W=340, cx=W/2, cy=W/2;
+  var R_outer=158, R_zodiac_out=158, R_zodiac_in=134, R_houses_out=134, R_houses_in=114, R_planets=92, R_asp=68;
+  var D2R=Math.PI/180;
+  var ascDeg=chart.houses.ASC;
+
+  function eclToAngle(lon){
+    return (((-(lon - ascDeg)+180)%360)+360)%360;
+  }
+  function pol(angleDeg, r){
+    var a=(angleDeg-90)*D2R;
+    return [cx+r*Math.cos(a), cy+r*Math.sin(a)];
+  }
+  function arcPath(r, a1, a2){
+    var p1=pol(a1,r), p2=pol(a2,r);
+    var large=(((a2-a1)%360+360)%360)>180?1:0;
+    return 'M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 '+large+',1 '+p2[0]+','+p2[1];
+  }
+
+  var SIGN_COLORS_BG=['rgba(220,80,60,.13)','rgba(180,130,60,.13)','rgba(80,160,200,.13)',
+    'rgba(60,160,120,.13)','rgba(220,160,40,.13)','rgba(80,160,80,.13)',
+    'rgba(180,120,200,.13)','rgba(80,80,200,.13)','rgba(220,120,60,.13)',
+    'rgba(100,100,120,.13)','rgba(60,180,220,.13)','rgba(140,100,200,.13)'];
+  var SIGN_COLORS=['#dc503c','#b48230','#50a0c8','#3ca078','#dca028','#50a050',
+    '#b478c8','#5050c8','#dc783c','#646478','#3cb4dc','#8c64c8'];
+
+  var svg=['<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'" xmlns="http://www.w3.org/2000/svg">'];
+  svg.push('<defs>');
+  svg.push('<radialGradient id="bgGrad" cx="50%" cy="50%">');
+  svg.push('<stop offset="0%" stop-color="#1a1230"/>');
+  svg.push('<stop offset="100%" stop-color="#07060f"/>');
+  svg.push('</radialGradient>');
+  svg.push('<filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>');
+  svg.push('</defs>');
+
+  // Background circle
+  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+R_outer+'" fill="url(#bgGrad)" stroke="rgba(212,175,55,0.3)" stroke-width="1.5"/>');
+
+  // Zodiac band background segments
+  var SIGN_SYM2=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+  for(var i=0;i<12;i++){
+    var a1=eclToAngle(i*30), a2=eclToAngle((i+1)*30);
+    var p1o=pol(a1,R_zodiac_out), p2o=pol(a2,R_zodiac_out);
+    var p1i=pol(a1,R_zodiac_in), p2i=pol(a2,R_zodiac_in);
+    var large=(((a2-a1)%360+360)%360)>180?1:0;
+    var large2=(((a1-a2)%360+360)%360)>180?1:0;
+    // segment fill
+    svg.push('<path d="M'+p1i[0]+','+p1i[1]+' L'+p1o[0]+','+p1o[1]+
+      ' A'+R_zodiac_out+','+R_zodiac_out+' 0 '+large+',1 '+p2o[0]+','+p2o[1]+
+      ' L'+p2i[0]+','+p2i[1]+
+      ' A'+R_zodiac_in+','+R_zodiac_in+' 0 '+large2+',0 '+p1i[0]+','+p1i[1]+' Z"'+
+      ' fill="'+SIGN_COLORS_BG[i]+'" stroke="rgba(212,175,55,0.12)" stroke-width="0.5"/>');
+    // sign symbol
+    var midA=eclToAngle(i*30+15);
+    var pm=pol(midA, (R_zodiac_out+R_zodiac_in)/2);
+    svg.push('<text x="'+pm[0]+'" y="'+pm[1]+'" text-anchor="middle" dominant-baseline="central" font-size="13" fill="'+SIGN_COLORS[i]+'" opacity="0.9" font-family="serif">'+SIGN_SYM2[i]+'</text>');
+  }
+
+  // Zodiac outer ring dividers
+  for(var i=0;i<12;i++){
+    var a=eclToAngle(i*30);
+    var p1=pol(a,R_zodiac_in), p2=pol(a,R_zodiac_out);
+    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="rgba(212,175,55,0.25)" stroke-width="0.8"/>');
+  }
+
+  // Inner rings
+  [R_houses_out, R_houses_in, R_asp].forEach(function(r){
+    svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(212,175,55,0.1)" stroke-width="0.7"/>');
+  });
+
+  // Aspect lines
+  var ASP_COLORS={conjunction:'rgba(240,192,64,0.55)',opposition:'rgba(224,80,80,0.5)',
+    trine:'rgba(80,192,128,0.5)',square:'rgba(224,128,48,0.5)',sextile:'rgba(96,144,224,0.5)'};
+  var ASP_DASH={conjunction:'none',opposition:'4,3',trine:'none',square:'3,3',sextile:'6,3'};
+  var pNames=Object.keys(chart.planets);
+  chart.aspects.slice(0,20).forEach(function(a){
+    var p1=chart.planets[a.p1], p2=chart.planets[a.p2];
+    if(!p1||!p2) return;
+    var a1=eclToAngle(p1.lon), a2=eclToAngle(p2.lon);
+    var c1=pol(a1,R_asp), c2=pol(a2,R_asp);
+    var col=a.asp?(ASP_COLORS[a.asp.name.toLowerCase()]||ASP_COLORS[Object.keys(ASP_COLORS).find(k=>a.asp.name.toLowerCase().includes(k))||'conjunction']||'rgba(200,200,200,0.3)'):'rgba(200,200,200,0.3)';
+    var dash=a.asp?(ASP_DASH[a.asp.name.toLowerCase()]||'none'):'none';
+    svg.push('<line x1="'+c1[0]+'" y1="'+c1[1]+'" x2="'+c2[0]+'" y2="'+c2[1]+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="'+dash+'"/>');
+  });
+
+  // House cusps
+  for(var h=1;h<=12;h++){
+    var deg=chart.houses.cusps[h];
+    if(deg==null) continue;
+    var isMaj=[1,4,7,10].indexOf(h)>=0;
+    var ang=eclToAngle(deg);
+    var p1=pol(ang, R_houses_in), p2=pol(ang, R_houses_out);
+    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="'+(isMaj?'rgba(212,175,55,0.7)':'rgba(212,175,55,0.2)')+'" stroke-width="'+(isMaj?'1.2':'0.6')+'"/>');
+    if(isMaj){
+      var lbl={1:'AC',4:'IC',7:'DC',10:'MC'}[h];
+      var lp=pol(ang, R_houses_out+10);
+      svg.push('<text x="'+lp[0]+'" y="'+lp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="8.5" fill="#d4af37" font-family="Cinzel,serif" font-weight="bold">'+lbl+'</text>');
+    }
+    // house number
+    var midNext=chart.houses.cusps[h%12+1];
+    if(midNext!=null){
+      var midA=eclToAngle((deg+(midNext>deg?(midNext-deg):(midNext+360-deg))/2));
+      var np=pol(midA, (R_houses_in+R_asp)/2);
+      svg.push('<text x="'+np[0]+'" y="'+np[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7.5" fill="rgba(212,175,55,0.4)" font-family="Cinzel,serif">'+h+'</text>');
+    }
+  }
+
+  // Axis lines AC-DC, MC-IC
+  var axPairs=[[chart.houses.ASC,chart.houses.DSC],[chart.houses.MC,chart.houses.IC]];
+  axPairs.forEach(function(pair){
+    var a1=eclToAngle(pair[0]), a2=eclToAngle(pair[1]);
+    var p1=pol(a1,R_houses_out), p2=pol(a2,R_houses_out);
+    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="rgba(212,175,55,0.3)" stroke-width="0.7" stroke-dasharray="3,3"/>');
+  });
+
+  // Planet positions — collision avoidance
+  var planetEntries=Object.entries(chart.planets);
+  var placed=[];
+  planetEntries.sort(function(a,b){return a[1].lon-b[1].lon;});
+  planetEntries.forEach(function(entry){
+    var name=entry[0], p=entry[1];
+    var ang=eclToAngle(p.lon);
+    var dispAng=ang;
+    // nudge if too close
+    for(var attempt=0;attempt<20;attempt++){
+      var conflict=placed.some(function(pl){
+        var diff=Math.abs(((dispAng-pl)%360+360)%360);
+        return Math.min(diff,360-diff)<11;
+      });
+      if(!conflict) break;
+      dispAng+=11;
+    }
+    placed.push(dispAng);
+
+    // tick line from zodiac ring to planet
+    var tp1=pol(ang,R_houses_in), tp2=pol(ang,R_houses_in-8);
+    svg.push('<line x1="'+tp1[0]+'" y1="'+tp1[1]+'" x2="'+tp2[0]+'" y2="'+tp2[1]+'" stroke="'+p.color+'" stroke-width="0.8" opacity="0.6"/>');
+
+    // planet circle
+    var pp=pol(dispAng,R_planets);
+    svg.push('<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="11" fill="rgba(7,6,15,0.85)" stroke="'+p.color+'" stroke-width="1.3" filter="url(#glow)"/>');
+    svg.push('<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="11" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>');
+
+    // retrograde mark
+    if(p.retrograde){
+      var rp=pol(dispAng+8, R_planets+10);
+      svg.push('<text x="'+rp[0]+'" y="'+rp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7" fill="rgba(220,100,80,0.9)" font-family="serif">℞</text>');
+    }
+  });
+
+  // Center dot
+  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="rgba(212,175,55,0.6)"/>');
+  svg.push('</svg>');
+
+  document.getElementById('wheel-svg-wrap').innerHTML=svg.join('');
 }
 
 function renderPlanetsList(){
