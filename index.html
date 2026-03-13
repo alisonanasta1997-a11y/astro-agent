@@ -465,8 +465,15 @@ function normalizeChart(data){
   aspDefs.forEach(function(a){aspMap[a.name.toLowerCase()]=a;aspMap[a.name]=a;});
   aspMap.conjunction=aspDefs[0];aspMap.opposition=aspDefs[1];aspMap.trine=aspDefs[2];aspMap.square=aspDefs[3];aspMap.sextile=aspDefs[4];
 
+  var typeMap2={
+    'conjunction':'Соединение','opposition':'Оппозиция','trine':'Трин',
+    'square':'Квадратура','sextile':'Секстиль',
+    'Conjunction':'Соединение','Opposition':'Оппозиция','Trine':'Трин',
+    'Square':'Квадратура','Sextile':'Секстиль'
+  };
   var aspects=(data.aspects||[]).map(function(a){
-    return {p1:a.planet1==='True_Node'?'North Node':a.planet1, p2:a.planet2==='True_Node'?'North Node':a.planet2, asp:aspMap[a.type]||aspDefs[0], orb:a.orb};
+    var ruName=typeMap2[a.type]||a.type;
+    return {p1:a.planet1==='True_Node'?'North Node':a.planet1, p2:a.planet2==='True_Node'?'North Node':a.planet2, asp:aspMap[ruName]||aspMap[a.type]||null, orb:a.orb};
   });
 
   return {planets:planets,houses:{ASC:ASC,MC:MC,IC:(MC+180)%360,DSC:(ASC+180)%360,cusps:cusps},aspects:aspects};
@@ -862,8 +869,8 @@ function toggleRaw(){
 function renderWheel(){
   var chart=S.chart;
   var W=360, cx=180, cy=180, D2R=Math.PI/180;
-  var R1=168, R2=146, R3=126, R4=56;
-  var Rpl=108;
+  var R1=168, R2=148, R3=122, R4=54;
+  var Rpl=135; // between R3 and R2 - same ring as zodiac inner edge
   var asc=chart.houses.ASC;
 
   function lon2a(lon){
@@ -963,16 +970,13 @@ function renderWheel(){
       disp=(disp+13)%360;
     }
     placed.push(disp);
-    // True position tick - from zodiac inner edge to house ring
-    var tk1=pt(base,R2), tk2=pt(base,R3);
-    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="1.2" opacity="0.8"/>';
-    // Small dot at true ecliptic position
-    var tdot=pt(base,R3-4);
-    out+='<circle cx="'+tdot[0]+'" cy="'+tdot[1]+'" r="2" fill="'+p.color+'" opacity="0.9"/>';
-    // Thin line from true pos to displaced circle
-    if(Math.abs(((disp-base)+360)%360) > 1){
-      var tl1=pt(base,R3-6), tl2=pt(disp,Rpl+13);
-      out+='<line x1="'+tl1[0]+'" y1="'+tl1[1]+'" x2="'+tl2[0]+'" y2="'+tl2[1]+'" stroke="'+p.color+'" stroke-width="0.5" opacity="0.35" stroke-dasharray="2,2"/>';
+    // Tick at true ecliptic position on house ring
+    var tk1=pt(base,R3+4), tk2=pt(base,R3-6);
+    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="1" opacity="0.7"/>';
+    // Dashed line to displaced circle if needed
+    if(Math.abs(((disp-base)+360)%360) > 2){
+      var tl1=pt(base,R3+3), tl2=pt(disp,Rpl-13);
+      out+='<line x1="'+tl1[0]+'" y1="'+tl1[1]+'" x2="'+tl2[0]+'" y2="'+tl2[1]+'" stroke="'+p.color+'" stroke-width="0.5" opacity="0.3" stroke-dasharray="2,2"/>';
     }
     var pp=pt(disp,Rpl);
     out+='<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="12" fill="rgba(8,6,18,0.92)" stroke="'+p.color+'" stroke-width="1.4" filter="url(#gp)"/>';
