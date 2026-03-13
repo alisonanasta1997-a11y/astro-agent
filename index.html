@@ -369,7 +369,14 @@ function buildChart(){
   .then(function(data){
     if(data.error){ throw new Error(data.error); }
     S.rawData=data;
+    console.log('RAW aspects:', JSON.stringify(data.aspects && data.aspects.slice(0,3)));
+    console.log('RAW planets:', JSON.stringify(data.planets && data.planets.slice(0,2)));
+    console.log('ASC:', JSON.stringify(data.ascendant));
+    console.log('Houses:', JSON.stringify(data.houses && data.houses.slice(0,3)));
     S.chart=normalizeChart(data);
+    console.log('CHART ASC lon:', S.chart.houses.ASC);
+    console.log('CHART Neptune:', JSON.stringify(S.chart.planets['Neptune']));
+    console.log('CHART cusps 1,6,7:', S.chart.houses.cusps[1], S.chart.houses.cusps[6], S.chart.houses.cusps[7]);
     startChat();
   })
   .catch(function(e){
