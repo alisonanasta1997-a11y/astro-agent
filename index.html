@@ -853,170 +853,125 @@ function toggleRaw(){
 // ── Колесо ─────────────────────────────────────────────────────
 function renderWheel(){
   var chart=S.chart;
-  var W=360, cx=180, cy=180;
-  var D2R=Math.PI/180;
+  var W=360, cx=180, cy=180, D2R=Math.PI/180;
+  var R1=168, R2=146, R3=126, R4=56;
+  var Rpl=108;
+  var asc=chart.houses.ASC;
 
-  // Радиусы
-  var R1=170; // внешний край зодиака
-  var R2=148; // внутренний край зодиака
-  var R3=128; // внешний край домов
-  var R4=58;  // внутренний край (аспекты)
-
-  // АСЦ = 180° (левая сторона SVG, 9 часов)
-  // Формула: lon -> угол на SVG
-  // При lon=ASC угол должен быть 180° (слева)
-  var asc = chart.houses.ASC;
-  function lonToAngle(lon){
-    // Вычитаем ASC, добавляем 180 чтобы ASC был слева
-    var a = lon - asc + 180;
-    return ((a % 360) + 360) % 360;
+  function lon2a(lon){
+    return (((lon - asc + 180) % 360) + 360) % 360;
   }
-  function toXY(angleDeg, r){
-    var rad = (angleDeg - 90) * D2R;
-    return {x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad)};
-  }
-  function arc(r, a1, a2){
-    var p1=toXY(a1,r), p2=toXY(a2,r);
-    var da = ((a2 - a1) + 360) % 360;
-    var lg = da > 180 ? 1 : 0;
-    return 'M'+p1.x+','+p1.y+' A'+r+','+r+' 0 '+lg+',1 '+p2.x+','+p2.y;
+  function pt(a,r){
+    var rad=(a-90)*D2R;
+    return [cx+r*Math.cos(rad), cy+r*Math.sin(rad)];
   }
 
-  // Цвета знаков (стихии)
-  var FIRE='rgba(160,60,40,0.7)', EARTH='rgba(80,100,50,0.7)',
-      AIR='rgba(60,90,140,0.7)',  WATER='rgba(50,80,120,0.7)';
-  var SCOL=[FIRE,EARTH,AIR,WATER,FIRE,EARTH,AIR,WATER,FIRE,EARTH,AIR,WATER];
+  var SCOL=['rgba(160,60,40,.75)','rgba(90,110,55,.75)','rgba(55,95,150,.75)','rgba(45,85,125,.75)',
+            'rgba(165,110,30,.75)','rgba(55,100,55,.75)','rgba(65,65,150,.75)','rgba(25,45,120,.75)',
+            'rgba(155,80,25,.75)','rgba(40,40,65,.75)','rgba(25,100,140,.75)','rgba(75,45,130,.75)'];
   var SSYM=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 
-  var s=[]; // svg parts
-  s.push('<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'" xmlns="http://www.w3.org/2000/svg">');
-  s.push('<defs><filter id="pg"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>');
+  var out='<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'" xmlns="http://www.w3.org/2000/svg">';
+  out+='<defs>';
+  out+='<clipPath id="cc"><circle cx="'+cx+'" cy="'+cy+'" r="'+R1+'"/></clipPath>';
+  out+='<filter id="gp"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  out+='</defs>';
 
-  // Фон круга
-  s.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+R1+'" fill="#0e0b1e" stroke="rgba(212,175,55,0.2)" stroke-width="1.5"/>');
+  // всё внутри clip
+  out+='<g clip-path="url(#cc)">';
 
-  // Зодиакальные сегменты
+  // фон
+  out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R1+'" fill="#0d0a1e"/>';
+
+  // зодиак
   for(var i=0;i<12;i++){
-    var a1=lonToAngle(i*30), a2=lonToAngle((i+1)*30);
-    var p1o=toXY(a1,R1), p2o=toXY(a2,R1);
-    var p1i=toXY(a1,R2), p2i=toXY(a2,R2);
+    var a1=lon2a(i*30), a2=lon2a((i+1)*30);
+    var p1o=pt(a1,R1), p2o=pt(a2,R1), p1i=pt(a1,R2), p2i=pt(a2,R2);
     var da=((a2-a1)+360)%360, lg=da>180?1:0, lg2=da>180?0:1;
-    s.push('<path d="M'+p1i.x+','+p1i.y+' L'+p1o.x+','+p1o.y+
-      ' A'+R1+','+R1+' 0 '+lg+',1 '+p2o.x+','+p2o.y+
-      ' L'+p2i.x+','+p2i.y+
-      ' A'+R2+','+R2+' 0 '+lg2+',0 '+p1i.x+','+p1i.y+' Z"'+
-      ' fill="'+SCOL[i]+'" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>');
-    // разделители
-    s.push('<line x1="'+p1i.x+'" y1="'+p1i.y+'" x2="'+p1o.x+'" y2="'+p1o.y+'" stroke="rgba(255,255,255,0.15)" stroke-width="0.7"/>');
-    // символ знака
-    var ma=lonToAngle(i*30+15), mp=toXY(ma,(R1+R2)/2);
-    s.push('<text x="'+mp.x+'" y="'+mp.y+'" text-anchor="middle" dominant-baseline="central" font-size="13" fill="rgba(255,255,255,0.9)" font-family="serif">'+SSYM[i]+'</text>');
+    out+='<path d="M'+p1i[0]+','+p1i[1]+
+         ' L'+p1o[0]+','+p1o[1]+
+         ' A'+R1+','+R1+' 0 '+lg+',1 '+p2o[0]+','+p2o[1]+
+         ' L'+p2i[0]+','+p2i[1]+
+         ' A'+R2+','+R2+' 0 '+lg2+',0 '+p1i[0]+','+p1i[1]+'Z"'+
+         ' fill="'+SCOL[i]+'" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>';
+    out+='<line x1="'+p1i[0]+'" y1="'+p1i[1]+'" x2="'+p1o[0]+'" y2="'+p1o[1]+'" stroke="rgba(255,255,255,0.12)" stroke-width="0.6"/>';
+    var ma=lon2a(i*30+15), mp=pt(ma,(R1+R2)/2);
+    out+='<text x="'+mp[0]+'" y="'+mp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="13" fill="rgba(255,255,255,0.85)" font-family="serif">'+SSYM[i]+'</text>';
   }
 
-  // Внутренние кольца
+  // кольца
   [R2,R3,R4].forEach(function(r){
-    s.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(212,175,55,0.12)" stroke-width="0.7"/>');
+    out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(212,175,55,0.12)" stroke-width="0.7"/>';
   });
 
-  // Линии домов
+  // дома
   for(var h=1;h<=12;h++){
-    var cd=chart.houses.cusps[h];
-    if(cd==null) continue;
+    var cd=chart.houses.cusps[h]; if(cd==null) continue;
     var maj=[1,4,7,10].indexOf(h)>=0;
-    var ha=lonToAngle(cd);
-    var pi=toXY(ha,R4), po=toXY(ha,R2);
-    s.push('<line x1="'+pi.x+'" y1="'+pi.y+'" x2="'+po.x+'" y2="'+po.y+
-      '" stroke="'+(maj?'rgba(212,175,55,0.75)':'rgba(212,175,55,0.2)')+
-      '" stroke-width="'+(maj?'1.2':'0.5')+'"/>');
-    // метки осей снаружи
+    var ha=lon2a(cd);
+    var pi=pt(ha,R4), po=pt(ha,R2);
+    out+='<line x1="'+pi[0]+'" y1="'+pi[1]+'" x2="'+po[0]+'" y2="'+po[1]+
+         '" stroke="'+(maj?'rgba(212,175,55,0.8)':'rgba(212,175,55,0.18)')+
+         '" stroke-width="'+(maj?1.3:0.5)+'"/>';
     if(maj){
       var lbl={1:'AC',4:'IC',7:'DC',10:'MC'}[h];
-      var lp=toXY(ha, R1+13);
-      s.push('<text x="'+lp.x+'" y="'+lp.y+'" text-anchor="middle" dominant-baseline="central"'+
-        ' font-size="9" fill="#d4af37" font-family="Cinzel,serif" font-weight="bold">'+lbl+'</text>');
+      var lp=pt(ha,R2+14);
+      out+='<text x="'+lp[0]+'" y="'+lp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#d4af37" font-family="Cinzel,serif" font-weight="bold">'+lbl+'</text>';
     }
-    // номера домов в середине сектора
     var nd=chart.houses.cusps[h%12+1];
     if(nd!=null){
       var sp=((nd-cd)+360)%360;
-      var mha=lonToAngle(cd+sp/2);
-      var nhp=toXY(mha,(R3+R4)/2);
-      s.push('<text x="'+nhp.x+'" y="'+nhp.y+'" text-anchor="middle" dominant-baseline="central"'+
-        ' font-size="9" fill="rgba(212,175,55,0.5)" font-family="Cinzel,serif">'+h+'</text>');
+      var nhp=pt(lon2a(cd+sp/2),(R3+R4)/2);
+      out+='<text x="'+nhp[0]+'" y="'+nhp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="9" fill="rgba(212,175,55,0.45)" font-family="Cinzel,serif">'+h+'</text>';
     }
   }
 
-  // Линии аспектов
-  var ACOL={conjunction:'rgba(255,200,50,0.45)',opposition:'rgba(220,60,60,0.5)',
-    trine:'rgba(50,180,100,0.5)',square:'rgba(220,100,30,0.5)',sextile:'rgba(80,130,220,0.5)'};
+  // аспекты
+  var ACOL={conjunction:'rgba(255,200,50,0.4)',opposition:'rgba(220,60,60,0.45)',
+    trine:'rgba(50,180,100,0.45)',square:'rgba(220,100,30,0.45)',sextile:'rgba(80,130,220,0.45)'};
   var ADASH={conjunction:'none',opposition:'5,3',trine:'none',square:'3,3',sextile:'7,3'};
   chart.aspects.slice(0,24).forEach(function(a){
-    var p1=chart.planets[a.p1],p2=chart.planets[a.p2];
-    if(!p1||!p2) return;
-    var c1=toXY(lonToAngle(p1.lon),R4-4), c2=toXY(lonToAngle(p2.lon),R4-4);
+    var p1=chart.planets[a.p1], p2=chart.planets[a.p2]; if(!p1||!p2) return;
+    var c1=pt(lon2a(p1.lon),R4-4), c2=pt(lon2a(p2.lon),R4-4);
     var an=a.asp?a.asp.name.toLowerCase():'';
-    if(an.indexOf('соедин')>=0||an==='conjunction') an='conjunction';
-    else if(an.indexOf('оппозиц')>=0||an==='opposition') an='opposition';
-    else if(an.indexOf('трин')>=0||an==='trine') an='trine';
-    else if(an.indexOf('квадрат')>=0||an==='square') an='square';
-    else if(an.indexOf('секстил')>=0||an==='sextile') an='sextile';
-    s.push('<line x1="'+c1.x+'" y1="'+c1.y+'" x2="'+c2.x+'" y2="'+c2.y+
-      '" stroke="'+(ACOL[an]||'rgba(180,180,180,0.2)')+'" stroke-width="0.9" stroke-dasharray="'+(ADASH[an]||'none')+'"/>');
+    if(an.indexOf('соедин')>=0) an='conjunction';
+    else if(an.indexOf('оппозиц')>=0) an='opposition';
+    else if(an.indexOf('трин')>=0) an='trine';
+    else if(an.indexOf('квадрат')>=0) an='square';
+    else if(an.indexOf('секстил')>=0) an='sextile';
+    out+='<line x1="'+c1[0]+'" y1="'+c1[1]+'" x2="'+c2[0]+'" y2="'+c2[1]+
+         '" stroke="'+(ACOL[an]||'rgba(180,180,180,0.2)')+'" stroke-width="0.9" stroke-dasharray="'+(ADASH[an]||'none')+'"/>';
   });
 
-  // Планеты с расталкиванием
+  // планеты
   var placed=[];
-  var ents=Object.entries(chart.planets).sort(function(a,b){return a[1].lon-b[1].lon;});
-  var Rpl=108; // кольцо планет — между R3 и R2
-  ents.forEach(function(e){
+  Object.entries(chart.planets).sort(function(a,b){return a[1].lon-b[1].lon;}).forEach(function(e){
     var nm=e[0], p=e[1];
-    var base=lonToAngle(p.lon), disp=base;
+    var base=lon2a(p.lon), disp=base;
     for(var t=0;t<30;t++){
-      if(!placed.some(function(x){
-        var d=Math.abs(((disp-x)+360)%360);
-        return Math.min(d,360-d)<13;
-      })) break;
+      if(!placed.some(function(x){var d=Math.abs(((disp-x)+360)%360);return Math.min(d,360-d)<13;})) break;
       disp=(disp+13)%360;
     }
     placed.push(disp);
-    // черточка от кольца домов к позиции
-    var tk1=toXY(base,R3), tk2=toXY(base,R3-9);
-    s.push('<line x1="'+tk1.x+'" y1="'+tk1.y+'" x2="'+tk2.x+'" y2="'+tk2.y+
-      '" stroke="'+p.color+'" stroke-width="1" opacity="0.7"/>');
-    // круг планеты
-    var pp=toXY(disp,Rpl);
-    s.push('<circle cx="'+pp.x+'" cy="'+pp.y+'" r="12" fill="rgba(8,6,18,0.92)" stroke="'+p.color+'" stroke-width="1.4" filter="url(#pg)"/>');
-    s.push('<text x="'+pp.x+'" y="'+pp.y+'" text-anchor="middle" dominant-baseline="central"'+
-      ' font-size="12" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>');
-    // градусы
+    var tk1=pt(base,R3), tk2=pt(base,R3-10);
+    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="1" opacity="0.7"/>';
+    var pp=pt(disp,Rpl);
+    out+='<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="12" fill="rgba(8,6,18,0.92)" stroke="'+p.color+'" stroke-width="1.4" filter="url(#gp)"/>';
+    out+='<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="12" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>';
     var dg=Math.floor(p.sign.degree);
-    var dlp=toXY(disp,Rpl+19);
-    s.push('<text x="'+dlp.x+'" y="'+dlp.y+'" text-anchor="middle" dominant-baseline="central"'+
-      ' font-size="7.5" fill="rgba(212,175,55,0.5)" font-family="sans-serif">'+dg+'°</text>');
-    // ретроград
-    if(p.retrograde){
-      var rp=toXY(disp,Rpl-16);
-      s.push('<text x="'+rp.x+'" y="'+rp.y+'" text-anchor="middle" dominant-baseline="central"'+
-        ' font-size="8" fill="rgba(220,80,80,0.9)" font-family="serif">R</text>');
-    }
+    var dlp=pt(disp,Rpl+19);
+    out+='<text x="'+dlp[0]+'" y="'+dlp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7" fill="rgba(212,175,55,0.45)">'+dg+'°</text>';
+    if(p.retrograde){var rp=pt(disp,Rpl-16);out+='<text x="'+rp[0]+'" y="'+rp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="8" fill="rgba(220,80,80,0.9)">R</text>';}
   });
 
-  // Центр
-  s.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+R4+'" fill="rgba(8,6,18,0.5)"/>');
-  s.push('<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="rgba(212,175,55,0.6)"/>');
+  // центр
+  out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R4+'" fill="rgba(8,6,18,0.55)"/>';
+  out+='<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="rgba(212,175,55,0.6)"/>';
+  out+='</g>';
+  out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R1+'" fill="none" stroke="rgba(212,175,55,0.3)" stroke-width="1.5"/>';
+  out+='</svg>';
 
-  // Обрезаем всё по кругу
-  s.unshift('<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'" xmlns="http://www.w3.org/2000/svg">'+
-    '<defs><clipPath id="circ"><circle cx="'+cx+'" cy="'+cy+'" r="'+R1+'"/></clipPath>'+
-    '<filter id="pg"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>');
-  // replace first svg open
-  s[1]='<g clip-path="url(#circ)">';
-  s.push('</g>');
-  s.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+R1+'" fill="none" stroke="rgba(212,175,55,0.3)" stroke-width="1.5"/>');
-  s.push('</svg>');
-  s.shift(); // remove duplicate svg open
-
-  document.getElementById('wheel-svg-wrap').innerHTML=s.join('');
+  document.getElementById('wheel-svg-wrap').innerHTML=out;
 }
 
 </script>
