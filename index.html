@@ -297,19 +297,28 @@ function autoGeocode(){
   btn.disabled=true; btn.textContent='⏳ Определяю...';
   res.style.display='none';
 
+  res.style.display='block'; res.style.color='rgba(212,175,55,0.6)';
+  res.textContent='⏳ Запрос к серверу...';
+
   fetch(BACKEND+'/geocode',{
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({city:city,year:year,month:month,day:day,hour:hour})
-  }).then(function(r){return r.json();})
+  }).then(function(r){
+    if(!r.ok){ throw new Error('Сервер вернул '+r.status); }
+    return r.json();
+  })
   .then(function(d){
     if(d.error){ throw new Error(d.error); }
     document.getElementById('f-lat').value = d.lat;
     document.getElementById('f-lon').value = d.lng;
     document.getElementById('f-gmt').value = d.gmt;
-    res.style.display='block'; res.style.color='var(--gold)';
-    var dn=Array.isArray(d.display_name)?d.display_name.join(', '):d.display_name.split(',').slice(0,3).join(',');res.textContent='✓ '+dn;
+    // store tz_str for natal request
+    window._tz_str = d.tz_str;
+    res.style.color='rgba(80,192,128,0.9)';
+    var dn=Array.isArray(d.display_name)?d.display_name.join(', '):(d.display_name||'').split(',').slice(0,3).join(',');
+    res.textContent='✓ '+dn+' (UTC'+(d.gmt>=0?'+':'')+d.gmt+')';
   }).catch(function(e){
-    res.style.display='block'; res.style.color='#e07050';
+    res.style.color='#e07050';
     res.textContent='❌ '+e.message;
   }).finally(function(){
     btn.disabled=false; btn.textContent='🔍 Определить автоматически по городу';
@@ -339,7 +348,7 @@ function buildChart(){
   var y=parts[0],m=parts[1],d=parts[2];
   var tparts=time.split(':').map(Number);
   var h=tparts[0],min=tparts[1];
-  var tz_str=TZ_MAP[gmt]||'UTC';
+  var tz_str=window._tz_str||(TZ_MAP[gmt]||'UTC');
 
   fetch(BACKEND+'/natal',{
     method:'POST',
