@@ -369,14 +369,7 @@ function buildChart(){
   .then(function(data){
     if(data.error){ throw new Error(data.error); }
     S.rawData=data;
-    console.log('RAW aspects:', JSON.stringify(data.aspects && data.aspects.slice(0,3)));
-    console.log('RAW planets:', JSON.stringify(data.planets && data.planets.slice(0,2)));
-    console.log('ASC:', JSON.stringify(data.ascendant));
-    console.log('Houses:', JSON.stringify(data.houses && data.houses.slice(0,3)));
     S.chart=normalizeChart(data);
-    console.log('CHART ASC lon:', S.chart.houses.ASC);
-    console.log('CHART Neptune:', JSON.stringify(S.chart.planets['Neptune']));
-    console.log('CHART cusps 1,6,7:', S.chart.houses.cusps[1], S.chart.houses.cusps[6], S.chart.houses.cusps[7]);
     startChat();
   })
   .catch(function(e){
@@ -674,7 +667,7 @@ function renderAspectsList(){
     html+='</div>';
     list.forEach(function(a){
       var p1=chart.planets[a.p1], p2=chart.planets[a.p2];
-      if(!p1||!p2) return;
+      if(!p1||!p2||!a.asp) return;
       html+='<div style="display:flex;align-items:center;gap:4px;padding:4px 4px;border-bottom:1px solid rgba(212,175,55,0.04)">';
       html+='<span style="color:'+p1.color+';font-size:12px">'+p1.symbol+'</span>';
       html+='<span style="color:rgba(232,220,200,.55);font-size:10px;font-family:\'EB Garamond\',serif;flex:1">'+a.p1+'</span>';
@@ -687,6 +680,13 @@ function renderAspectsList(){
     html+='</div>';
   });
 
+  // Show unknown aspect types too
+  Object.keys(groups).forEach(function(gname){
+    if(ORDER.indexOf(gname)>=0) return; // already shown
+    var list=groups[gname];
+    if(!list||!list.length) return;
+    html+='<div style="margin-bottom:8px"><div style="font-size:9px;color:rgba(212,175,55,.3);padding:4px">'+gname+'</div></div>';
+  });
   html+='</div>';
   document.getElementById('tab-aspects').innerHTML=html;
 }
@@ -876,8 +876,8 @@ function toggleRaw(){
 function renderWheel(){
   var chart=S.chart;
   var W=360, cx=180, cy=180, D2R=Math.PI/180;
-  var R1=168, R2=148, R3=122, R4=54;
-  var Rpl=135; // between R3 and R2 - same ring as zodiac inner edge
+  var R1=168, R2=148, R3=124, R4=52;
+  var Rpl=88; // between R3(124) and R4(52) - inside house ring
   var asc=chart.houses.ASC;
 
   function lon2a(lon){
@@ -954,7 +954,7 @@ function renderWheel(){
   var ACOL={conjunction:'rgba(255,200,50,0.4)',opposition:'rgba(220,60,60,0.45)',
     trine:'rgba(50,180,100,0.45)',square:'rgba(220,100,30,0.45)',sextile:'rgba(80,130,220,0.45)'};
   var ADASH={conjunction:'none',opposition:'5,3',trine:'none',square:'3,3',sextile:'7,3'};
-  chart.aspects.slice(0,24).forEach(function(a){
+  chart.aspects.forEach(function(a){
     var p1=chart.planets[a.p1], p2=chart.planets[a.p2]; if(!p1||!p2) return;
     var c1=pt(lon2a(p1.lon),R4-4), c2=pt(lon2a(p2.lon),R4-4);
     var an=a.asp?a.asp.name.toLowerCase():'';
@@ -972,26 +972,27 @@ function renderWheel(){
   Object.entries(chart.planets).sort(function(a,b){return a[1].lon-b[1].lon;}).forEach(function(e){
     var nm=e[0], p=e[1];
     var base=lon2a(p.lon), disp=base;
-    for(var t=0;t<30;t++){
-      if(!placed.some(function(x){var d=Math.abs(((disp-x)+360)%360);return Math.min(d,360-d)<13;})) break;
-      disp=(disp+13)%360;
+    // Collision avoidance - small nudge only
+    for(var t=0;t<24;t++){
+      if(!placed.some(function(x){var d=Math.abs(((disp-x)+360)%360);return Math.min(d,360-d)<10;})) break;
+      disp=(disp+10)%360;
     }
     placed.push(disp);
-    // Tick at true ecliptic position on house ring
-    var tk1=pt(base,R3+4), tk2=pt(base,R3-6);
-    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="1" opacity="0.7"/>';
-    // Dashed line to displaced circle if needed
-    if(Math.abs(((disp-base)+360)%360) > 2){
-      var tl1=pt(base,R3+3), tl2=pt(disp,Rpl-13);
-      out+='<line x1="'+tl1[0]+'" y1="'+tl1[1]+'" x2="'+tl2[0]+'" y2="'+tl2[1]+'" stroke="'+p.color+'" stroke-width="0.5" opacity="0.3" stroke-dasharray="2,2"/>';
-    }
+    // Tick line at true position on inner house ring
+    var tk1=pt(base,R3-1), tk2=pt(base,R4+4);
+    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="0.8" opacity="0.5"/>';
+    // Planet circle at displaced position
     var pp=pt(disp,Rpl);
-    out+='<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="12" fill="rgba(8,6,18,0.92)" stroke="'+p.color+'" stroke-width="1.4" filter="url(#gp)"/>';
-    out+='<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="12" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>';
+    out+='<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="10" fill="rgba(8,6,18,0.93)" stroke="'+p.color+'" stroke-width="1.3" filter="url(#gp)"/>';
+    out+='<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>';
+    // Degree near zodiac ring
     var dg=Math.floor(p.sign.degree);
-    var dlp=pt(disp,Rpl+19);
-    out+='<text x="'+dlp[0]+'" y="'+dlp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7" fill="rgba(212,175,55,0.45)">'+dg+'°</text>';
-    if(p.retrograde){var rp=pt(disp,Rpl-16);out+='<text x="'+rp[0]+'" y="'+rp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="8" fill="rgba(220,80,80,0.9)">R</text>';}
+    var dlp=pt(base,R2-8);
+    out+='<text x="'+dlp[0]+'" y="'+dlp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="6.5" fill="rgba(255,255,255,0.5)">'+dg+'°</text>';
+    if(p.retrograde){
+      var rp=pt(disp,Rpl-13);
+      out+='<text x="'+rp[0]+'" y="'+rp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7" fill="rgba(220,80,80,0.9)">R</text>';
+    }
   });
 
   // центр
