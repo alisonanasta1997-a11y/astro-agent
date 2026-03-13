@@ -166,8 +166,8 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
       <div id="tab-planets" style="display:none"></div>
       <div id="tab-aspects" style="display:none"></div>
       <button class="btn-ghost" style="margin-top:4px" onclick="goForm()">← Новый расчёт</button>
-      <button class="btn-ghost" style="margin-top:4px" onclick="toggleRaw()">🔍 Данные бэкенда</button>
-      <div id="raw-box"></div>
+      
+      
     </div>
     <div id="chat-main">
       <div id="messages"></div>
@@ -629,6 +629,14 @@ function renderPlanetsList(){
 
 function renderAspectsList(){
   var chart=S.chart;
+  // Нормализуем названия аспектов
+  var ASPMAP={conjunction:'Соединение',opposition:'Оппозиция',trine:'Трин',square:'Квадратура',sextile:'Секстиль'};
+  chart.aspects.forEach(function(a){
+    if(a.asp){
+      var n=a.asp.name.toLowerCase();
+      if(ASPMAP[n]) a.asp.name=ASPMAP[n];
+    }
+  });
   var html='<div style="padding:4px 2px">';
   html+='<div style="font-size:9px;letter-spacing:.15em;color:rgba(212,175,55,.4);text-transform:uppercase;padding:0 4px 8px">Аспекты</div>';
 
@@ -859,7 +867,9 @@ function renderWheel(){
   var asc=chart.houses.ASC;
 
   function lon2a(lon){
-    return (((lon - asc + 180) % 360) + 360) % 360;
+    // ASC → left side (180° in SVG = 9 o'clock position)
+    // zodiac goes counter-clockwise in astrology, so we negate
+    return (((asc - lon + 180) % 360) + 360) % 360;
   }
   function pt(a,r){
     var rad=(a-90)*D2R;
