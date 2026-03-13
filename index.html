@@ -57,13 +57,13 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
 #tab-planets,#tab-aspects{overflow-y:auto;max-height:calc(100vh - 180px)}
 #tab-wheel{display:flex;justify-content:center;align-items:center}
 #chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
-#messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:11px;padding-right:4px}
+#messages{flex:0 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:11px;padding-right:4px;min-height:0}
 .msg{display:flex;gap:8px;align-items:flex-start;animation:fadeUp .3s ease}
 .msg-av{width:28px;height:28px;border-radius:7px;background:rgba(212,175,55,0.1);border:1px solid var(--goldF);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
 .bubble{max-width:78%;padding:11px 15px;font-size:14px;line-height:1.75}
 .bubble.ai{background:var(--card);border:1px solid var(--goldF);border-radius:14px 14px 14px 4px}
 .bubble.user{background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.25);border-radius:14px 14px 4px 14px}
-.topic-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.topic-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .topic-btn{padding:9px 16px;border:1px solid var(--goldF);border-radius:9px;background:transparent;color:var(--gold);font-size:13px;font-family:'EB Garamond',serif}
 .topic-btn:hover{background:rgba(212,175,55,.12);border-color:rgba(212,175,55,.5)}
 #input-area{margin-top:11px;border-top:1px solid var(--goldF);padding-top:11px}
@@ -963,8 +963,17 @@ function renderWheel(){
       disp=(disp+13)%360;
     }
     placed.push(disp);
-    var tk1=pt(base,R3), tk2=pt(base,R3-10);
-    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="1" opacity="0.7"/>';
+    // True position tick - from zodiac inner edge to house ring
+    var tk1=pt(base,R2), tk2=pt(base,R3);
+    out+='<line x1="'+tk1[0]+'" y1="'+tk1[1]+'" x2="'+tk2[0]+'" y2="'+tk2[1]+'" stroke="'+p.color+'" stroke-width="1.2" opacity="0.8"/>';
+    // Small dot at true ecliptic position
+    var tdot=pt(base,R3-4);
+    out+='<circle cx="'+tdot[0]+'" cy="'+tdot[1]+'" r="2" fill="'+p.color+'" opacity="0.9"/>';
+    // Thin line from true pos to displaced circle
+    if(Math.abs(((disp-base)+360)%360) > 1){
+      var tl1=pt(base,R3-6), tl2=pt(disp,Rpl+13);
+      out+='<line x1="'+tl1[0]+'" y1="'+tl1[1]+'" x2="'+tl2[0]+'" y2="'+tl2[1]+'" stroke="'+p.color+'" stroke-width="0.5" opacity="0.35" stroke-dasharray="2,2"/>';
+    }
     var pp=pt(disp,Rpl);
     out+='<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="12" fill="rgba(8,6,18,0.92)" stroke="'+p.color+'" stroke-width="1.4" filter="url(#gp)"/>';
     out+='<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="12" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>';
