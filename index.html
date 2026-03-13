@@ -53,7 +53,7 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
 #loading-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
 .spinner{width:48px;height:48px;border:3px solid var(--goldF);border-top-color:var(--gold);border-radius:50%;animation:spin 1.2s linear infinite}
 #chat-layout{flex:1;display:flex;gap:16px;padding:16px 0;max-height:calc(100vh - 108px);overflow:hidden}
-#sidebar{width:360px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+#sidebar{width:380px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
 #tab-planets,#tab-aspects{overflow-y:auto;max-height:calc(100vh - 180px)}
 #tab-wheel{display:flex;justify-content:center;align-items:center}
 #chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -853,110 +853,181 @@ function toggleRaw(){
 // ── Колесо ─────────────────────────────────────────────────────
 function renderWheel(){
   var chart=S.chart;
-  var W=340, cx=W/2, cy=W/2;
-  var R_outer=158, R_zodiac_out=158, R_zodiac_in=134, R_houses_out=134, R_houses_in=114, R_planets=92, R_asp=68;
+  var W=360, cx=W/2, cy=W/2;
+  // Radii
+  var Rout=170, Rzout=170, Rzin=148, Rhout=148, Rhin=128, Rpl=108, Rasp=82, Rin=72;
   var D2R=Math.PI/180;
   var ascDeg=chart.houses.ASC;
 
-  function eclToAngle(lon){ return (((-(lon-ascDeg)+180)%360)+360)%360; }
-  function pol(angleDeg,r){ var a=(angleDeg-90)*D2R; return [cx+r*Math.cos(a),cy+r*Math.sin(a)]; }
-
-  var SIGN_COLORS_BG=['rgba(220,80,60,.13)','rgba(180,130,60,.13)','rgba(80,160,200,.13)',
-    'rgba(60,160,120,.13)','rgba(220,160,40,.13)','rgba(80,160,80,.13)',
-    'rgba(180,120,200,.13)','rgba(80,80,200,.13)','rgba(220,120,60,.13)',
-    'rgba(100,100,120,.13)','rgba(60,180,220,.13)','rgba(140,100,200,.13)'];
-  var SIGN_COLORS=['#dc503c','#b48230','#50a0c8','#3ca078','#dca028','#50a050',
-    '#b478c8','#5050c8','#dc783c','#646478','#3cb4dc','#8c64c8'];
-  var SIGN_SYM2=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
-
-  var svg=['<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'" xmlns="http://www.w3.org/2000/svg">'];
-  svg.push('<defs><radialGradient id="bgGrad" cx="50%" cy="50%"><stop offset="0%" stop-color="#1a1230"/><stop offset="100%" stop-color="#07060f"/></radialGradient>');
-  svg.push('<filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>');
-  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+R_outer+'" fill="url(#bgGrad)" stroke="rgba(212,175,55,0.3)" stroke-width="1.5"/>');
-
-  for(var i=0;i<12;i++){
-    var a1=eclToAngle(i*30),a2=eclToAngle((i+1)*30);
-    var p1o=pol(a1,R_zodiac_out),p2o=pol(a2,R_zodiac_out);
-    var p1i=pol(a1,R_zodiac_in),p2i=pol(a2,R_zodiac_in);
-    var large=(((a2-a1)%360+360)%360)>180?1:0;
-    var large2=(((a1-a2)%360+360)%360)>180?1:0;
-    svg.push('<path d="M'+p1i[0]+','+p1i[1]+' L'+p1o[0]+','+p1o[1]+' A'+R_zodiac_out+','+R_zodiac_out+' 0 '+large+',1 '+p2o[0]+','+p2o[1]+' L'+p2i[0]+','+p2i[1]+' A'+R_zodiac_in+','+R_zodiac_in+' 0 '+large2+',0 '+p1i[0]+','+p1i[1]+' Z" fill="'+SIGN_COLORS_BG[i]+'" stroke="rgba(212,175,55,0.12)" stroke-width="0.5"/>');
-    var midA=eclToAngle(i*30+15),pm=pol(midA,(R_zodiac_out+R_zodiac_in)/2);
-    svg.push('<text x="'+pm[0]+'" y="'+pm[1]+'" text-anchor="middle" dominant-baseline="central" font-size="13" fill="'+SIGN_COLORS[i]+'" opacity="0.9" font-family="serif">'+SIGN_SYM2[i]+'</text>');
+  // АСЦ = левый горизонт (180° на SVG = 9 часов)
+  // ecliptic lon → SVG angle: ASC goes to 180deg (left)
+  function eclToSVG(lon){
+    // Rotate so ASC = 180 (left side)
+    var a = (lon - ascDeg + 180 + 360) % 360;
+    return a; // 0=top, clockwise
   }
-  for(var i=0;i<12;i++){
-    var a=eclToAngle(i*30),p1=pol(a,R_zodiac_in),p2=pol(a,R_zodiac_out);
-    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="rgba(212,175,55,0.25)" stroke-width="0.8"/>');
+  function pol(svgAngle, r){
+    var a = (svgAngle - 90) * D2R;
+    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
   }
-  [R_houses_out,R_houses_in,R_asp].forEach(function(r){
-    svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(212,175,55,0.1)" stroke-width="0.7"/>');
+  function lineP(a1, a2, r1, r2){
+    var p1=pol(a1,r1), p2=pol(a2,r2);
+    return p1[0]+','+p1[1]+' '+p2[0]+','+p2[1];
+  }
+
+  // Sign colors like geocal.te
+  var SIGN_COLORS=[
+    '#8B3A3A','#5C4A2A','#2A5C5C','#2A4A3A',
+    '#6B4A1A','#2A4A2A','#3A3A6B','#1A2A5C',
+    '#5C3A1A','#2A2A3A','#1A4A5C','#3A2A5C'
+  ];
+  var SIGN_SYM=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+  var SIGN_NAMES_RU=['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы'];
+
+  var svg=[];
+  svg.push('<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'" xmlns="http://www.w3.org/2000/svg" style="display:block">');
+  svg.push('<defs>');
+  svg.push('<radialGradient id="bg2" cx="50%" cy="50%"><stop offset="0%" stop-color="#16112a"/><stop offset="100%" stop-color="#07060f"/></radialGradient>');
+  svg.push('<filter id="glow2"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>');
+  svg.push('</defs>');
+
+  // Outer bg
+  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+Rout+'" fill="url(#bg2)" stroke="rgba(212,175,55,0.15)" stroke-width="1"/>');
+
+  // Zodiac segments (colored like geocal.te)
+  for(var i=0;i<12;i++){
+    var a1=eclToSVG(i*30), a2=eclToSVG((i+1)*30);
+    var p1o=pol(a1,Rzout), p2o=pol(a2,Rzout);
+    var p1i=pol(a1,Rzin), p2i=pol(a2,Rzin);
+    var span=((a2-a1)+360)%360;
+    var large=span>180?1:0;
+    var large2=span>180?0:1;
+    // filled arc segment
+    svg.push('<path d="M'+p1i[0]+','+p1i[1]+
+      ' L'+p1o[0]+','+p1o[1]+
+      ' A'+Rzout+','+Rzout+' 0 '+large+',1 '+p2o[0]+','+p2o[1]+
+      ' L'+p2i[0]+','+p2i[1]+
+      ' A'+Rzin+','+Rzin+' 0 '+large2+',0 '+p1i[0]+','+p1i[1]+' Z"'+
+      ' fill="'+SIGN_COLORS[i]+'" opacity="0.75"/>');
+    // divider line
+    svg.push('<line x1="'+p1i[0]+'" y1="'+p1i[1]+'" x2="'+p1o[0]+'" y2="'+p1o[1]+'" stroke="rgba(255,255,255,0.12)" stroke-width="0.6"/>');
+    // sign glyph
+    var midA=eclToSVG(i*30+15), pm=pol(midA,(Rzout+Rzin)/2);
+    svg.push('<text x="'+pm[0]+'" y="'+pm[1]+'" text-anchor="middle" dominant-baseline="central" font-size="12" fill="rgba(255,255,255,0.85)" font-family="serif">'+SIGN_SYM[i]+'</text>');
+  }
+
+  // Inner rings
+  [Rhout,Rhin,Rasp,Rin].forEach(function(r){
+    svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(212,175,55,0.12)" stroke-width="0.7"/>');
   });
 
-  var ASP_COLORS={conjunction:'rgba(240,192,64,0.55)',opposition:'rgba(224,80,80,0.5)',trine:'rgba(80,192,128,0.5)',square:'rgba(224,128,48,0.5)',sextile:'rgba(96,144,224,0.5)'};
-  var ASP_DASH={conjunction:'none',opposition:'4,3',trine:'none',square:'3,3',sextile:'6,3'};
-  chart.aspects.slice(0,20).forEach(function(a){
-    var p1=chart.planets[a.p1],p2=chart.planets[a.p2];
-    if(!p1||!p2) return;
-    var a1=eclToAngle(p1.lon),a2=eclToAngle(p2.lon);
-    var c1=pol(a1,R_asp),c2=pol(a2,R_asp);
-    var aname=a.asp?a.asp.name.toLowerCase():'';
-    var col=ASP_COLORS[aname]||'rgba(200,200,200,0.2)';
-    var dash=ASP_DASH[aname]||'none';
-    svg.push('<line x1="'+c1[0]+'" y1="'+c1[1]+'" x2="'+c2[0]+'" y2="'+c2[1]+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="'+dash+'"/>');
-  });
-
+  // House cusps
   for(var h=1;h<=12;h++){
     var deg=chart.houses.cusps[h];
     if(deg==null) continue;
     var isMaj=[1,4,7,10].indexOf(h)>=0;
-    var ang=eclToAngle(deg);
-    var p1=pol(ang,R_houses_in),p2=pol(ang,R_houses_out);
-    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="'+(isMaj?'rgba(212,175,55,0.7)':'rgba(212,175,55,0.2)')+'" stroke-width="'+(isMaj?'1.2':'0.6')+'"/>');
+    var ang=eclToSVG(deg);
+    var p1=pol(ang,Rin), p2=pol(ang,Rhout);
+    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+
+      '" stroke="'+(isMaj?'rgba(212,175,55,0.8)':'rgba(212,175,55,0.18)')+
+      '" stroke-width="'+(isMaj?'1.2':'0.5')+'"/>');
+
+    // AC DC MC IC labels outside zodiac
     if(isMaj){
       var lbl={1:'AC',4:'IC',7:'DC',10:'MC'}[h];
-      var lp=pol(ang,R_houses_out+10);
-      svg.push('<text x="'+lp[0]+'" y="'+lp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="8.5" fill="#d4af37" font-family="Cinzel,serif" font-weight="bold">'+lbl+'</text>');
+      var lp=pol(ang, Rzout+12);
+      svg.push('<text x="'+lp[0]+'" y="'+lp[1]+'" text-anchor="middle" dominant-baseline="central"'+
+        ' font-size="9" fill="#d4af37" font-family="Cinzel,serif" font-weight="bold">'+lbl+'</text>');
+      // cusp degree
+      var cdeg=Math.floor(deg%30);
+      var cdp=pol(ang, Rhout+8);
+      svg.push('<text x="'+cdp[0]+'" y="'+cdp[1]+'" text-anchor="middle" dominant-baseline="central"'+
+        ' font-size="7" fill="rgba(212,175,55,0.5)" font-family="sans-serif">'+cdeg+'°</text>');
     }
-    var next=h%12+1,midNext=chart.houses.cusps[next];
-    if(midNext!=null){
-      var span=((midNext-deg)%360+360)%360;
-      var midA2=eclToAngle(deg+span/2);
-      var np=pol(midA2,(R_houses_in+R_asp)/2);
-      svg.push('<text x="'+np[0]+'" y="'+np[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7.5" fill="rgba(212,175,55,0.4)" font-family="Cinzel,serif">'+h+'</text>');
+
+    // House numbers between cusps
+    var next=h%12+1;
+    var nextDeg=chart.houses.cusps[next];
+    if(nextDeg!=null){
+      var span2=((nextDeg-deg)+360)%360;
+      var midHouseAng=eclToSVG(deg+span2/2);
+      var nhp=pol(midHouseAng,(Rhin+Rasp)/2);
+      svg.push('<text x="'+nhp[0]+'" y="'+nhp[1]+'" text-anchor="middle" dominant-baseline="central"'+
+        ' font-size="9" fill="rgba(212,175,55,0.45)" font-family="Cinzel,serif">'+h+'</text>');
     }
   }
 
-  var axPairs=[[chart.houses.ASC,chart.houses.DSC],[chart.houses.MC,chart.houses.IC]];
-  axPairs.forEach(function(pair){
-    var a1=eclToAngle(pair[0]),a2=eclToAngle(pair[1]);
-    var p1=pol(a1,R_houses_out),p2=pol(a2,R_houses_out);
-    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+'" stroke="rgba(212,175,55,0.3)" stroke-width="0.7" stroke-dasharray="3,3"/>');
+  // Axis lines AC-DC, MC-IC (dashed)
+  [[chart.houses.ASC,chart.houses.DSC],[chart.houses.MC,chart.houses.IC]].forEach(function(pair){
+    var a1=eclToSVG(pair[0]),a2=eclToSVG(pair[1]);
+    var p1=pol(a1,Rhin),p2=pol(a2,Rhin);
+    svg.push('<line x1="'+p1[0]+'" y1="'+p1[1]+'" x2="'+p2[0]+'" y2="'+p2[1]+
+      '" stroke="rgba(212,175,55,0.25)" stroke-width="0.7" stroke-dasharray="3,3"/>');
   });
 
+  // Aspect lines
+  var ASP_COL={conjunction:'rgba(255,200,50,0.5)',opposition:'rgba(220,60,60,0.5)',
+    trine:'rgba(50,180,100,0.55)',square:'rgba(220,100,30,0.5)',sextile:'rgba(80,130,220,0.5)'};
+  var ASP_DASH={conjunction:'none',opposition:'5,3',trine:'none',square:'3,3',sextile:'7,3'};
+  chart.aspects.slice(0,22).forEach(function(a){
+    var p1=chart.planets[a.p1],p2=chart.planets[a.p2];
+    if(!p1||!p2) return;
+    var a1=eclToSVG(p1.lon),a2=eclToSVG(p2.lon);
+    var c1=pol(a1,Rasp),c2=pol(a2,Rasp);
+    var aname=a.asp?a.asp.name.toLowerCase():'';
+    // map russian names
+    if(aname.indexOf('соединен')>=0) aname='conjunction';
+    else if(aname.indexOf('оппозиц')>=0) aname='opposition';
+    else if(aname.indexOf('трин')>=0) aname='trine';
+    else if(aname.indexOf('квадрат')>=0) aname='square';
+    else if(aname.indexOf('секстил')>=0) aname='sextile';
+    var col=ASP_COL[aname]||'rgba(180,180,180,0.2)';
+    var dash=ASP_DASH[aname]||'none';
+    svg.push('<line x1="'+c1[0]+'" y1="'+c1[1]+'" x2="'+c2[0]+'" y2="'+c2[1]+
+      '" stroke="'+col+'" stroke-width="0.9" stroke-dasharray="'+dash+'"/>');
+  });
+
+  // Planets — collision avoidance
   var placed=[];
-  var planetEntries=Object.entries(chart.planets);
-  planetEntries.sort(function(a,b){return a[1].lon-b[1].lon;});
-  planetEntries.forEach(function(entry){
-    var name=entry[0],p=entry[1];
-    var ang=eclToAngle(p.lon),dispAng=ang;
-    for(var attempt=0;attempt<20;attempt++){
-      var conflict=placed.some(function(pl){var diff=Math.abs(((dispAng-pl)%360+360)%360);return Math.min(diff,360-diff)<11;});
-      if(!conflict) break;
-      dispAng+=11;
+  var entries=Object.entries(chart.planets).sort(function(a,b){return a[1].lon-b[1].lon;});
+  entries.forEach(function(e){
+    var name=e[0],p=e[1];
+    var ang=eclToSVG(p.lon), disp=ang;
+    for(var t=0;t<24;t++){
+      if(!placed.some(function(x){var d=Math.abs(((disp-x)%360+360)%360);return Math.min(d,360-d)<13;})) break;
+      disp=(disp+13)%360;
     }
-    placed.push(dispAng);
-    var tp1=pol(ang,R_houses_in),tp2=pol(ang,R_houses_in-8);
-    svg.push('<line x1="'+tp1[0]+'" y1="'+tp1[1]+'" x2="'+tp2[0]+'" y2="'+tp2[1]+'" stroke="'+p.color+'" stroke-width="0.8" opacity="0.6"/>');
-    var pp=pol(dispAng,R_planets);
-    svg.push('<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="11" fill="rgba(7,6,15,0.85)" stroke="'+p.color+'" stroke-width="1.3" filter="url(#glow)"/>');
-    svg.push('<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="11" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>');
-    if(p.retrograde){var rp=pol(dispAng+8,R_planets+10);svg.push('<text x="'+rp[0]+'" y="'+rp[1]+'" text-anchor="middle" dominant-baseline="central" font-size="7" fill="rgba(220,100,80,0.9)">℞</text>');}
+    placed.push(disp);
+    // tick from house ring to planet
+    var tp1=pol(ang,Rhin-2), tp2=pol(ang,Rhin-10);
+    svg.push('<line x1="'+tp1[0]+'" y1="'+tp1[1]+'" x2="'+tp2[0]+'" y2="'+tp2[1]+
+      '" stroke="'+p.color+'" stroke-width="0.8" opacity="0.7"/>');
+    // planet circle
+    var pp=pol(disp,Rpl);
+    svg.push('<circle cx="'+pp[0]+'" cy="'+pp[1]+'" r="12" fill="rgba(10,8,20,0.9)" stroke="'+p.color+'" stroke-width="1.3" filter="url(#glow2)"/>');
+    svg.push('<text x="'+pp[0]+'" y="'+pp[1]+'" text-anchor="middle" dominant-baseline="central"'+
+      ' font-size="12" fill="'+p.color+'" font-family="serif">'+p.symbol+'</text>');
+    // degree label
+    var dlabel=Math.floor(p.sign.degree)+'°';
+    var dlp=pol(disp, Rpl+18);
+    svg.push('<text x="'+dlp[0]+'" y="'+dlp[1]+'" text-anchor="middle" dominant-baseline="central"'+
+      ' font-size="7" fill="rgba(212,175,55,0.45)" font-family="sans-serif">'+dlabel+'</text>');
+    // retrograde
+    if(p.retrograde){
+      var rp=pol(disp,Rpl+14);
+      svg.push('<text x="'+rp[0]+'" y="'+rp[1]+'" text-anchor="middle" dominant-baseline="central"'+
+        ' font-size="7" fill="rgba(220,80,80,0.9)">R</text>');
+    }
   });
 
-  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="rgba(212,175,55,0.6)"/>');
+  // Center
+  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+Rin+'" fill="rgba(7,6,15,0.6)" stroke="rgba(212,175,55,0.1)" stroke-width="0.5"/>');
+  svg.push('<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="rgba(212,175,55,0.5)"/>');
   svg.push('</svg>');
+
   document.getElementById('wheel-svg-wrap').innerHTML=svg.join('');
 }
+
 </script>
 </body>
 </html>
