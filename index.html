@@ -544,14 +544,14 @@ function callClaude(){
   addTyping();
   fetch(BACKEND+'/chat',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
-      system:buildPrompt(),
+    body:JSON.stringify({
+      chart_context:buildPrompt(),
       messages:S.msgs.map(function(m){return {role:m.role,content:m.content};})
     })
   }).then(function(r){return r.json();})
   .then(function(d){
     removeTyping();
-    var text=d.content&&d.content[0]?d.content[0].text:'Ошибка ответа.';
+    var text=d.reply||'Ошибка ответа.';
     S.msgs.push({role:'assistant',content:text});
     renderMsgs();
   }).catch(function(){
@@ -755,14 +755,14 @@ function callClaude(){
   addTyping();
   fetch(BACKEND+'/chat',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
-      system:buildPrompt(),
+    body:JSON.stringify({
+      chart_context:buildPrompt(),
       messages:S.msgs.map(function(m){return {role:m.role,content:m.content};})
     })
   }).then(function(r){return r.json();})
   .then(function(d){
     removeTyping();
-    var text=d.content&&d.content[0]?d.content[0].text:'Ошибка ответа.';
+    var text=d.reply||'Ошибка ответа.';
     S.msgs.push({role:'assistant',content:text});
     renderMsgs();
   }).catch(function(){
