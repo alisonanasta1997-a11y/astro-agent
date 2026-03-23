@@ -12,6 +12,7 @@
 <meta property="og:type" content="website">
 <meta name="robots" content="index, follow">
 <meta name="google-site-verification" content="50Gwyh-ngdu9hmyNqL6YSzSzlS76S4d-SvVUK26T3ys" />
+<link rel="canonical" href="https://astro-alison.ru" />
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -82,6 +83,8 @@ header{padding:22px 0 16px;border-bottom:1px solid var(--goldF);display:flex;ali
 .typing span:nth-child(2){animation-delay:.2s}
 .typing span:nth-child(3){animation-delay:.4s}
 #raw-box{display:none;font-size:10px;color:var(--goldD);background:rgba(0,0,0,0.5);border:1px solid var(--goldF);border-radius:8px;padding:10px;margin-top:6px;overflow-y:auto;max-height:280px;white-space:pre-wrap;font-family:monospace;line-height:1.5}
+
+@media(max-width:768px){#st-chat{flex-direction:column!important;max-height:none!important;overflow-y:auto!important}#sidebar{width:100%!important;min-width:0!important;max-height:none!important}#chat-main{min-height:400px}#wheel-svg-wrap svg{width:300px!important;height:300px!important}}
 </style>
 </head>
 <body>
